@@ -62,7 +62,40 @@ maxerr: 50, node: true */
 			[]
         );
 
+		domainManager.registerCommand(
+            "androidconnect",
+            "bracketsOpen",
+            bracketsOpen,
+            false,
+            "on brackets open",
+            [],
+			[]
+        );
+		domainManager.registerCommand(
+            "androidconnect",
+            "bracketsClose",
+            bracketsClose,
+            false,
+            "on brackets close",
+            [],
+			[]
+        );
+		//register events
+		domainManager.registerEvent(
+			"androidconnect",
+			"viewComand",
+			[
+				{name: "data", type: "string"},
+			]
+		);
+
 		server.init(serverPort);
+		server.setViewComandHandler(function(data) {
+			console.log(data)
+			domainManager.emitEvent("androidconnect", "viewComand", data);
+		});
+
+
 		var broadcastMsg = 'bracketsAndroidConnect:' + serverPort + ':' + process.pid;
 		broadcaster.init(5555, '192.168.0.255', broadcastMsg);
     }
@@ -76,8 +109,12 @@ maxerr: 50, node: true */
 	function setFocus(id) {
 
 	}
-
-
+	function bracketsOpen() {
+		//server.onOpen();
+	}
+	function bracketsClose() {
+		server.onClose();
+	}
 
 
 

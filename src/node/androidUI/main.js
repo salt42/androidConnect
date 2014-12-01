@@ -7,30 +7,25 @@ var bracketsConnect = (function() {
 		listeners : {},
 
 		init : function(ip, port) {
-			var socket = io.connect(),
-				self = this;
+			var self = this;
 
-			socket.on('system', function (data) {
+			this.socket = io.connect();
+
+			this.socket.on('system', function (data) {
 				if ('type' in data) {
 //					console.log('system incoming:', data, self);
 					self.notify.call(self, data.type, data.data);
 				}
 			});
 
-			socket.on('comand', function (data) {
+			this.socket.on('comand', function (data) {
 				if ('type' in data) {
-					self.notify.call(self, data.type, data.data, data.viewID);
+					//self.notify.call(self, data.type, data.data, data.viewID);
 				}
 			});
 		},
-		sendPackage : function (type, data) {
-			var pack = {
-				type : type,
-				data : data
-			};
-			this.sendData(pack);
-		},
-		bind : function(type, callback) {
+
+		bindSystem : function(type, callback) {
 			if (!(type in this.listeners)) {
 				this.listeners[type] = [];
 			}
@@ -44,12 +39,42 @@ var bracketsConnect = (function() {
 				this.listeners[type][i].call(null, data, viewID);
 			}
 		},
+		sendComand : function(viewID, type, data) {
+			var pack = {
+				viewID: viewID,
+				type: type,
+				data: data,
+			};
 
-		sendData : function (data) {
-			if (!this.connected) { return false; }
-			//ws.send(JSON.stringify(data));
+			this.sendPackage('comand', pack);
+		},
+		sendSystem : function(type, data) {
+			var pack = {
+				type: type,
+				data: data,
+			};
+			this.sendPackage('system', pack);
+		},
+		sendPackage : function(channel, pack) {
+			this.socket.emit(channel, pack);
 		},
 	};
+	function newBracketsConnectApi(View) {
+		var listeners = {};
+
+		return {
+			sendComand : function(type, data) {
+				console.log('sendComand');
+				NetworkController.sendComand(View.ID, type, data);
+			},
+			bindComand : function(type, callBack) {
+				if (!(type in listeners)) {
+					listeners[type] = [];
+				}
+				listeners[type].push(callBack);
+			}
+		};
+	}
 
 	var View = function(id, title, html, js) {
 		this.ID = id;
@@ -63,22 +88,26 @@ var bracketsConnect = (function() {
 		SidebarManager.register(this);
 		//create space and run code
 		(function(View) {
-			//kill all vars
-			console.log('eval buhahahaha');
+			//create bracketConnect api
+			var BracketsConnect = newBracketsConnectApi(View);
+
 			eval(View.JS);
 
 		})(this);
 	};
-
+	View.prototype.kill = function() {
+		this.$container.remove();
+	};
 	var SidebarManager = {
 		buttons : [],
 
 		init : function() {
-			$sidebar.click(function(e) {
+			$sidebar.on('click', function(e) {
 				if ($(e.target).hasClass('button') && $(e.target).attr('name')) {
 					this.trigger(parseInt($(e.target).attr('name')) );
 				}
 			}.bind(this));
+
 		},
 		register : function(view) {
 			var $button = $('<div class="button" name="' + view.ID + '">dsa</div>');
@@ -90,10 +119,23 @@ var bracketsConnect = (function() {
 			$sidebar.append($button);
 		},
 		trigger : function(ID) {
-			console.log('clickt on ', ID)
 			ViewManager.setFocus(ID);
 		},
+		clear : function() {
+			$sidebar.empty();
+			this.buttons = [];
+		},
+		remove : function(view) {
+			var index;
 
+			for(index in this.buttons) {
+				if (this.buttons[index].id === view.id) {
+					this.buttons[index].$ele.remove();
+					break;
+				}
+			}
+			this.buttons.splice(index, 1);
+		}
 	};
 	/*	show/hide content | build secure enviremnent
 	 *	@class
@@ -104,11 +146,18 @@ var bracketsConnect = (function() {
 
 		init : function() {
 			//register events
-			NetworkController.bind('resetViews', function(views) {
+			NetworkController.bindSystem('setViews', function(views) {
 				for (var i=0;i<views.length;i++) {
 					var newView = new View(parseInt(views[i].ID), views[i].Title,  views[i].HTML, views[i].JS);
 					this.addView(newView);
 				}
+			}.bind(this));
+			NetworkController.bindSystem('addView', function(view) {
+				var newView = new View(parseInt(view.ID), view.Title,  view.HTML, view.JS);
+				this.addView(newView);
+			}.bind(this));
+			NetworkController.bindSystem('close', function() {
+				this.clear();
 			}.bind(this));
 		},
 		/*
@@ -119,14 +168,21 @@ var bracketsConnect = (function() {
 			$content.append(view.$container);
 			view.load();
 		},
+		clear : function() {
+			for (var i in this.Views) {
+				this.Views[i].kill();
+//				SidebarManager.remove(this.Views[i]);
+			}
+			SidebarManager.clear();
+			this.Focus = null;
+			this.Views = [];
+		},
 		setFocus : function(ID) {
 			if (this.Focus !== null) {
-				this.getViewByID(this.Focus)
-					.$container.removeClass('focus');
+				this.getViewByID(this.Focus).$container.removeClass('focus');
 			}
 			this.Focus = ID;
-			this.getViewByID(ID)
-				.$container.addClass('focus');
+			this.getViewByID(ID).$container.addClass('focus');
 		},
 		getViewByID : function (ID) {
 			for (var i in this.Views) {
@@ -143,6 +199,8 @@ var bracketsConnect = (function() {
 		$content = $('#master-content');
 		$sidebar = $('#master-sidebar');
 		NetworkController.init();
+		//send loadViews
+		NetworkController.sendSystem('getViews');
 		SidebarManager.init();
 		ViewManager.init();
 		bracketsConnect = {

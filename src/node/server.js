@@ -8,8 +8,7 @@
 		server = require('http').createServer(app),
 		io = require('socket.io').listen(server),
 		viewCache = [],
-		clients = [],
-		emitEvent;
+		emitComand;
 
 
 
@@ -21,9 +20,8 @@
 	}
 
 	function broadcast(channel, data) {
-		for (var i in clients) {
-			clients[i].socket.emit(channel, data);
-		}
+		if (!data) { data = null; }
+		io.emit(channel, data);
 	}
 
 	exports.init = function(port) {
@@ -34,18 +32,18 @@
 		});
 
 		io.sockets.on('connection', function (socket) {
-			// der Client ist verbunden
-			clients.push(socket);
-			socket.emit('system', {
-				type: 'resetViews',
-				data: viewCache,
-			});
-
-
 			socket.on('system', function (data) {
+				if (data.type === 'getViews') {
+					socket.emit('system', {
+						type: 'setViews',
+						data: viewCache,
+					});
+				}
 				//io.sockets.emit('system', { zeit: new Date(), name: data.name || 'Anonym', text: data.text });
 			});
 			socket.on('comand', function (data) {
+				emitComand(data);
+
 				//send to brackets and dispatch than
 				//io.sockets.emit('system', { zeit: new Date(), name: data.name || 'Anonym', text: data.text });
 			});
@@ -59,13 +57,16 @@
 		broadcast('system', {
 			type : 'addView',
 			data : view,
-		})
+		});
 	};
-	exports.setEventHandler = function(cb) {
-		emitEvent = function() {
-			//dispatch event
-			cb.apply(null, arguments);
-		};
+	exports.setViewComandHandler = function(cb) {
+		emitComand = cb;
+	};
+	exports.onClose = function() {
+		viewCache = [];
+		broadcast('system', {
+			type : 'close'
+		});
 	};
 })();
 
