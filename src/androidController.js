@@ -1,9 +1,10 @@
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50, node: true */
 /*global define */
-define(function (require, exports) {
+define(function (require, exports, module) {
     "use strict";
 
     var DomainController = require('./domainController'),
+		ExtensionUtils = brackets.getModule("utils/ExtensionUtils"),
 		api = {},
 		Views = [];
 
@@ -22,11 +23,12 @@ define(function (require, exports) {
 			 * View for in android
 			 * @class
 			 */
-			function View(title) {
+			function View() {
 				this.ID = ID;
 				this.Title = title || 'undefined';
 				this.HTML = '';
 				this.JS = '';
+				this.path = '';
 			}
 
 			View.prototype.trigger = function(type, data) {
@@ -66,8 +68,10 @@ define(function (require, exports) {
 			View.prototype.getTitle = function() { return this.Title; };
 			View.prototype.getHTML = function() { return this.HTML; };
 			View.prototype.getJS = function() { return this.JS; };
-
-			return new View(title);
+			View.prototype.setPath = function(path) {
+				this.path = path;
+			};
+			return new View();
 		};
 
 	  return exports;
@@ -121,17 +125,14 @@ define(function (require, exports) {
 				.setHTML('<h1 class="headline">HUND KATZE MAUS<h1>')
 				.setJS("$('.headline').click(function() { BracketsConnect.sendComand('nice', {data:42}); });");
 		testView.bind('nice', function(data) {
-			console.log('nice!!!!!!!!!!!! ', data)
+			console.log('nice!!!!!!!!!!!! ', data);
 		});
 		api.addView(testView);
 
-
-
-		var testView2 = api.createView('testView2');
-		testView2.setTitle('Overview2')
-				.setHTML('<h1>nix<h1>')
-				.setJS('console.log(View);');
-		api.addView(testView2);
+		var webView = api.createView('webView');
+		webView.setTitle('webView')
+				.setPath(ExtensionUtils.getModulePath(module, 'quickButtonsView'));
+		api.addView(webView);
 
 
 	};

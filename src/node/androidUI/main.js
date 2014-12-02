@@ -76,24 +76,36 @@ var bracketsConnect = (function() {
 		};
 	}
 
-	var View = function(id, title, html, js) {
+	var View = function(id, title, html, js, path) {
 		this.ID = id;
 		this.Title = title || 'undefined';
 		this.HTML = html;
 		this.JS = js;
-		this.$container = $('<div class="view" name="' + title + '"></div>');
-		this.$container.html(html);
+		this.path = path || '';
+		if(path !== '') {
+			this.$container = $('<iframe class="view"></iframe>')
+				.attr('name', title)
+				.attr('src', 'http://' + window.location.host + '/viewid/' + this.ID);
+		} else {
+			this.$container = $('<div class="view"></div>')
+				.attr('name', title);
+			this.$container.html(html);
+		}
 	}
 	View.prototype.load = function() {
 		SidebarManager.register(this);
 		//create space and run code
-		(function(View) {
-			//create bracketConnect api
-			var BracketsConnect = newBracketsConnectApi(View);
+		if (this.path !== '') {
 
-			eval(View.JS);
+		} else {
+			(function(View) {
+				//create bracketConnect api
+				var BracketsConnect = newBracketsConnectApi(View);
 
-		})(this);
+				eval(View.JS);
+
+			})(this);
+		}
 	};
 	View.prototype.kill = function() {
 		this.$container.remove();
@@ -110,7 +122,7 @@ var bracketsConnect = (function() {
 
 		},
 		register : function(view) {
-			var $button = $('<div class="button" name="' + view.ID + '">dsa</div>');
+			var $button = $('<div class="button" name="' + view.ID + '"></div>');
 			this.buttons.push({
 				id : view.ID,
 				$ele : $button,
@@ -147,13 +159,23 @@ var bracketsConnect = (function() {
 		init : function() {
 			//register events
 			NetworkController.bindSystem('setViews', function(views) {
-				for (var i=0;i<views.length;i++) {
-					var newView = new View(parseInt(views[i].ID), views[i].Title,  views[i].HTML, views[i].JS);
+				console.log(views);
+				for (var i in views) {
+					if (!views[i]) { continue; }
+					var newView = new View(parseInt(views[i].ID),
+										   views[i].Title,
+										   views[i].HTML,
+										   views[i].JS,
+										   views[i].path);
 					this.addView(newView);
 				}
 			}.bind(this));
 			NetworkController.bindSystem('addView', function(view) {
-				var newView = new View(parseInt(view.ID), view.Title,  view.HTML, view.JS);
+				var newView = new View(parseInt(view.ID),
+									   view.Title,
+									   view.HTML,
+									   view.JS,
+									   view.path);
 				this.addView(newView);
 			}.bind(this));
 			NetworkController.bindSystem('close', function() {
@@ -165,7 +187,9 @@ var bracketsConnect = (function() {
 		 */
 		addView : function(view) {
 			this.Views.push(view);
+			console.log(view.$container);
 			$content.append(view.$container);
+//			$('#master-content').append(view.$container);
 			view.load();
 		},
 		clear : function() {

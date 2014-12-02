@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+#buttons {
+
+}
+#buttons .button {
+	position: relative;
+	float: left;
+	margin: 5px;
+	background: #3C3F41;
+	border: 1px solid #fba600;
+	border-radius: 10px;
+}
+#buttons .button:hover {
+	border-color: #0f0;
+}
+.size1 {
+	width: 100px;
+	height: 100px;
+}
+.size2 {
+	width: 205px;
+	height: 205px;
+}
+.size3 {
+	width: 310px;
+	height: 310px;
+}
+.rivets {
+	background: #3c4c9f;
+	width: 10px;
+	height: 10px;
+	border-radius: 5px;
+}
+.tl {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+}
+.tr {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+}
+.bl {
+	position: absolute;
+	bottom: 5px;
+	left: 5px;
+}
+.br {
+	position: absolute;
+	bottom: 5px;
+	right: 5px;
+}
+	</style>
+</head>
+<body>
+	<div id="buttons">
+		<div class="button size1"><div class="tl rivets"></div><div class="tr rivets"></div><div class="bl rivets"></div><div class="br rivets"></div></div>
+		<div class="button size1"></div>
+		<div class="button size2"></div>
+	</div>
+</body>
+</html>

@@ -15,7 +15,6 @@
 	function startListening(port) {
 		server.listen(port, function() {
 			console.log('Listening on port %d', server.address().port);
-
 		});
 	}
 
@@ -30,7 +29,11 @@
 		app.get('/', function (req, res) {
 			res.sendfile(__dirname + '/androidUI/index.html');
 		});
+		app.get('/viewid/:id', function (req, res) {
+			var view = viewCache[ parseInt(req.params.id) ];
 
+			res.sendfile(view.path + '/index.html');
+		});
 		io.sockets.on('connection', function (socket) {
 			socket.on('system', function (data) {
 				if (data.type === 'getViews') {
@@ -53,7 +56,7 @@
 
 	};
 	exports.addView = function(view) {
-		viewCache.push(view);
+		viewCache[view.ID] = view;
 		broadcast('system', {
 			type : 'addView',
 			data : view,
